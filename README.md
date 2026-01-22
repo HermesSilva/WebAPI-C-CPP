@@ -2,12 +2,13 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/C%2B%2B-17-blue.svg" alt="C++17"/>
+  <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6.svg" alt="TypeScript"/>
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg" alt="Platform"/>
   <img src="https://img.shields.io/badge/Architecture-x64%20%7C%20ARM64-green.svg" alt="Architecture"/>
   <img src="https://img.shields.io/badge/License-Proprietary-red.svg" alt="License"/>
 </p>
 
-Servidor WebAPI RESTful cross-platform desenvolvido em C++17, com suporte a múltiplas plataformas e arquiteturas.
+Servidor WebAPI RESTful cross-platform desenvolvido em C++17, com interface web em TypeScript e suporte a múltiplas plataformas e arquiteturas.
 
 ## 📋 Índice
 
@@ -19,6 +20,7 @@ Servidor WebAPI RESTful cross-platform desenvolvido em C++17, com suporte a múl
   - [Windows com CMake (Linha de Comando)](#windows-com-cmake-linha-de-comando)
   - [Linux](#linux)
   - [WSL (Windows Subsystem for Linux)](#wsl-windows-subsystem-for-linux)
+- [Frontend Web](#-frontend-web)
 - [Cross-Compilation](#-cross-compilation-compilação-cruzada)
   - [Usando WSL](#1-usando-wsl-recomendado)
   - [Usando Docker](#2-usando-docker)
@@ -26,6 +28,10 @@ Servidor WebAPI RESTful cross-platform desenvolvido em C++17, com suporte a múl
   - [Toolchain Files](#4-toolchain-file-para-cross-compilation)
 - [Execução](#-execução)
 - [API Endpoints](#-api-endpoints)
+  - [Endpoints Públicos](#endpoints-públicos)
+  - [Autenticação (JWT)](#autenticação-jwt)
+  - [Browseroso](#browseroso-navegador-de-tabelas)
+- [Documentação da API](#-documentação-da-api)
 - [Configuração](#-configuração)
 
 ---
@@ -35,7 +41,11 @@ Servidor WebAPI RESTful cross-platform desenvolvido em C++17, com suporte a múl
 - **Cross-Platform**: Suporte a Windows e Linux
 - **Multi-Arquitetura**: Compatível com x64 e ARM64
 - **RESTful API**: Endpoints JSON com suporte a CORS
+- **Autenticação JWT**: Login seguro com tokens JWT
+- **Browseroso**: Interface web para navegação de tabelas SQL
+- **Banco de Dados**: Acesso via ODBC (SQL Server, PostgreSQL, etc.)
 - **Header-Only HTTP**: Utiliza cpp-httplib (sem dependências externas)
+- **Frontend TypeScript**: Interface web moderna com TypeScript
 - **C++17**: Código moderno e eficiente
 - **Zero Configuração**: Pronto para executar após compilação
 - **Documentação Interativa**: Scalar, ReDoc e OpenAPI 3.0
@@ -96,30 +106,62 @@ WebAPI-C++/
 ├── 📄 TootegaWebAPI.sln        # Solução Visual Studio 2022
 ├── 📄 TootegaWebAPI.vcxproj    # Projeto Visual Studio 2022
 ├── 📄 README.md                # Este arquivo
-├── 📄 .gitignore               # Regras de ignore do Git
+├── 📄 build-all.ps1            # Script de build multiplataforma
 │
 ├── 📁 .vscode/                 # Configurações VS Code
 │   ├── launch.json
 │   ├── settings.json
 │   └── tasks.json
 │
-├── 📁 include/                 # Headers externos
-│   └── httplib.h               # cpp-httplib (HTTP server)
+├── 📁 docker/                  # Arquivos Docker
+│   ├── docker-compose.build.yml
+│   └── Dockerfile.linux
 │
-└── 📁 src/                     # Código fonte
+├── 📁 include/                 # Headers externos
+│   ├── httplib.h               # cpp-httplib (HTTP server)
+│   └── 📁 nanodbc/             # ODBC wrapper
+│       ├── nanodbc.h
+│       └── nanodbc.cpp
+│
+├── 📁 web/                     # Frontend Web
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── 📁 css/                 # Estilos CSS
+│   │   ├── variables.css       # Variáveis CSS
+│   │   ├── reset.css           # Reset de estilos
+│   │   ├── layout.css          # Layout geral
+│   │   ├── components.css      # Componentes
+│   │   └── 📁 pages/           # CSS específico por página
+│   ├── 📁 js/                  # JavaScript compilado
+│   │   ├── auth.js
+│   │   ├── common.js
+│   │   └── 📁 pages/
+│   ├── 📁 ts/                  # TypeScript fonte
+│   │   ├── auth.ts
+│   │   ├── common.ts
+│   │   └── 📁 pages/
+│   └── 📁 pages/               # Páginas HTML
+│       ├── home.html
+│       ├── login.html
+│       └── browseroso.html
+│
+└── 📁 src/                     # Código fonte C++
     ├── main.cpp                # Ponto de entrada
     │
     ├── 📁 api/                 # Controllers da API
-    │   ├── version_controller.h
-    │   ├── version_controller.cpp
-    │   ├── docs_controller.h   # Documentação (Scalar/ReDoc/OpenAPI)
-    │   └── docs_controller.cpp
+    │   ├── version_controller.h/cpp    # Versão e info do sistema
+    │   ├── docs_controller.h/cpp       # Documentação (Scalar/ReDoc/OpenAPI)
+    │   ├── auth_controller.h/cpp       # Autenticação JWT
+    │   ├── browseroso_controller.h/cpp # Interface de browse de tabelas
+    │   └── static_controller.h/cpp     # Arquivos estáticos (CSS/JS/HTML)
     │
-    └── 📁 core/                # Componentes principais
-        ├── server.h
-        ├── server.cpp
-        ├── system_info.h
-        └── system_info.cpp
+    ├── 📁 core/                # Componentes principais
+    │   ├── server.h/cpp        # Servidor HTTP
+    │   ├── system_info.h/cpp   # Informações do sistema
+    │   └── jwt.h/cpp           # Geração e validação JWT
+    │
+    └── 📁 data/                # Acesso a dados
+        └── database.h/cpp      # Conexão ODBC e queries
 ```
 
 ---
@@ -255,6 +297,65 @@ cmake --build --preset linux-arm64-release
 
 ---
 
+## 🌐 Frontend Web
+
+O projeto inclui uma interface web moderna desenvolvida com TypeScript e CSS modular.
+
+### Estrutura do Frontend
+
+```
+web/
+├── css/
+│   ├── variables.css     # Variáveis CSS (cores, espaçamentos, etc.)
+│   ├── reset.css         # Reset de estilos padrão
+│   ├── layout.css        # Layout principal e grid
+│   ├── components.css    # Componentes reutilizáveis
+│   └── pages/            # Estilos específicos por página
+├── ts/
+│   ├── common.ts         # Utilitários compartilhados
+│   ├── auth.ts           # Funções de autenticação
+│   └── pages/            # Scripts específicos por página
+├── js/                   # JavaScript compilado (gerado)
+└── pages/
+    ├── home.html         # Página inicial (requer auth)
+    ├── login.html        # Página de login
+    └── browseroso.html   # Navegador de tabelas
+```
+
+### Compilando o TypeScript
+
+```bash
+cd web
+
+# Instalar dependências (primeira vez)
+npm install
+
+# Compilar TypeScript
+npm run build
+
+# Ou em modo watch (desenvolvimento)
+npm run watch
+```
+
+### Tecnologias do Frontend
+
+| Tecnologia | Descrição |
+|------------|-----------|
+| TypeScript | Linguagem tipada para JavaScript |
+| CSS Custom Properties | Variáveis CSS para temas |
+| Fetch API | Requisições HTTP modernas |
+| JWT | Autenticação via token |
+
+### Páginas Disponíveis
+
+| Página | URL | Descrição |
+|--------|-----|-----------|
+| Login | `/login` | Autenticação do usuário |
+| Home | `/home` | Dashboard principal |
+| Browseroso | `/browseroso` | Navegador de tabelas SQL |
+
+---
+
 ## 🚀 Execução
 
 ### Uso Básico
@@ -333,7 +434,9 @@ sudo systemctl start tootega-webapi
 
 ## 📡 API Endpoints
 
-### GET /
+### Endpoints Públicos
+
+#### GET /
 
 Mensagem de boas-vindas com links para endpoints disponíveis.
 
@@ -347,7 +450,7 @@ Mensagem de boas-vindas com links para endpoints disponíveis.
 }
 ```
 
-### GET /health
+#### GET /health
 
 Health check simples.
 
@@ -359,7 +462,7 @@ Health check simples.
 }
 ```
 
-### GET /api/version
+#### GET /api/version
 
 Retorna informações básicas de versão do sistema.
 
@@ -375,7 +478,7 @@ Retorna informações básicas de versão do sistema.
 }
 ```
 
-### GET /api/version/detailed
+#### GET /api/version/detailed
 
 Retorna informações detalhadas do sistema, build e runtime.
 
@@ -407,7 +510,7 @@ Retorna informações detalhadas do sistema, build e runtime.
 }
 ```
 
-### GET /api/health
+#### GET /api/health
 
 Health check detalhado com informações de uptime.
 
@@ -421,6 +524,226 @@ Health check detalhado com informações de uptime.
     "timestamp": "2026-01-21T10:30:00Z"
 }
 ```
+
+### Autenticação (JWT)
+
+#### POST /api/auth/login
+
+Realiza login e retorna token JWT.
+
+**Request Body:**
+
+```json
+{
+    "username": "admin",
+    "password": "senha123"
+}
+```
+
+**Resposta (200):**
+
+```json
+{
+    "success": true,
+    "token": "eyJhbGciOiJIUzI1NiIs...",
+    "expires_in": 3600,
+    "token_type": "Bearer"
+}
+```
+
+**Resposta (401):**
+
+```json
+{
+    "success": false,
+    "error": "Invalid credentials"
+}
+```
+
+#### POST /api/auth/logout
+
+Realiza logout (invalida token no cliente).
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Resposta:**
+
+```json
+{
+    "success": true,
+    "message": "Logged out successfully"
+}
+```
+
+#### GET /api/auth/verify
+
+Verifica se o token JWT é válido.
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Resposta (200):**
+
+```json
+{
+    "valid": true,
+    "user": "admin"
+}
+```
+
+#### POST /api/auth/refresh
+
+Renova o token JWT antes de expirar.
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Resposta:**
+
+```json
+{
+    "success": true,
+    "token": "eyJhbGciOiJIUzI1NiIs...",
+    "expires_in": 3600
+}
+```
+
+### Browseroso (Navegador de Tabelas)
+
+> ⚠️ Requer autenticação JWT
+
+#### GET /browseroso
+
+Interface web para navegação de tabelas SQL.
+
+#### POST /api/browseroso/connect
+
+Conecta ao banco de dados.
+
+**Request Body:**
+
+```json
+{
+    "connectionString": "Driver={ODBC Driver 17 for SQL Server};Server=localhost;Database=MyDB;Uid=sa;Pwd=password;"
+}
+```
+
+**Resposta:**
+
+```json
+{
+    "success": true,
+    "message": "Connected successfully"
+}
+```
+
+#### POST /api/browseroso/disconnect
+
+Desconecta do banco de dados.
+
+**Resposta:**
+
+```json
+{
+    "success": true,
+    "message": "Disconnected"
+}
+```
+
+#### GET /api/browseroso/status
+
+Retorna status da conexão.
+
+**Resposta:**
+
+```json
+{
+    "connected": true,
+    "database": "MyDB"
+}
+```
+
+#### GET /api/browseroso/tables
+
+Lista todas as tabelas do banco conectado.
+
+**Resposta:**
+
+```json
+{
+    "tables": [
+        {"schema": "dbo", "name": "Customers"},
+        {"schema": "dbo", "name": "Orders"}
+    ]
+}
+```
+
+#### GET /api/browseroso/tables/:schema/:table/columns
+
+Retorna metadados das colunas de uma tabela.
+
+**Resposta:**
+
+```json
+{
+    "columns": [
+        {"name": "Id", "type": "int", "nullable": false, "isPrimaryKey": true},
+        {"name": "Name", "type": "varchar(100)", "nullable": true, "isPrimaryKey": false}
+    ]
+}
+```
+
+#### GET /api/browseroso/tables/:schema/:table/data
+
+Retorna dados de uma tabela com paginação.
+
+**Query Parameters:**
+
+- `page` (default: 1)
+- `pageSize` (default: 50)
+- `filter` (opcional)
+- `filterColumn` (opcional)
+
+**Resposta:**
+
+```json
+{
+    "columns": ["Id", "Name"],
+    "rows": [
+        {"Id": "1", "Name": "John"},
+        {"Id": "2", "Name": "Jane"}
+    ],
+    "totalRows": 100,
+    "page": 1,
+    "pageSize": 50
+}
+```
+
+### Páginas Web
+
+| Endpoint | Descrição | Autenticação |
+|----------|-----------|--------------|
+| GET /home | Página inicial | ✅ Requer |
+| GET /login | Página de login | ❌ Público |
+| GET /browseroso | Navegador de tabelas | ✅ Requer |
+
+### Arquivos Estáticos
+
+| Endpoint | Descrição |
+|----------|-----------|
+| GET /css/* | Arquivos CSS |
+| GET /js/* | Arquivos JavaScript |
+| GET /pages/* | Páginas HTML |
 
 ---
 
