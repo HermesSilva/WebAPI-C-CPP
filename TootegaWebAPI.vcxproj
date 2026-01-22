@@ -211,6 +211,7 @@
     <ClCompile Include="src\api\docs_controller.cpp" />
     <ClCompile Include="src\api\browser_controller.cpp" />
     <ClCompile Include="src\api\auth_controller.cpp" />
+    <ClCompile Include="src\api\static_controller.cpp" />
     <ClCompile Include="src\data\database.cpp" />
   </ItemGroup>
   
@@ -224,6 +225,7 @@
     <ClInclude Include="src\api\docs_controller.h" />
     <ClInclude Include="src\api\browser_controller.h" />
     <ClInclude Include="src\api\auth_controller.h" />
+    <ClInclude Include="src\api\static_controller.h" />
     <ClInclude Include="src\data\database.h" />
   </ItemGroup>
   

@@ -65,6 +65,7 @@ set(SOURCES
     src/api/docs_controller.cpp
     src/api/browser_controller.cpp
     src/api/auth_controller.cpp
+    src/api/static_controller.cpp
     src/data/database.cpp
 )
 
@@ -76,6 +77,7 @@ set(HEADERS
     src/api/docs_controller.h
     src/api/browser_controller.h
     src/api/auth_controller.h
+    src/api/static_controller.h
     src/data/database.h
 )
 

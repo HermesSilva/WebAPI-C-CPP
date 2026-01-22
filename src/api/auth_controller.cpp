@@ -73,9 +73,20 @@ bool AuthController::requiresAuth(const std::string &path)
                                                          "/api/version",
                                                          "/api/docs"};
 
+    // Public path prefixes (for static files, etc.)
+    static const std::vector<std::string> publicPrefixes = {"/static/"};
+
     for (const auto &publicPath : publicPaths)
     {
         if (path == publicPath)
+        {
+            return false;
+        }
+    }
+
+    for (const auto &prefix : publicPrefixes)
+    {
+        if (path.rfind(prefix, 0) == 0) // starts with prefix
         {
             return false;
         }

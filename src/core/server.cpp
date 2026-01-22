@@ -7,6 +7,7 @@
 #include "api/auth_controller.h"
 #include "api/browser_controller.h"
 #include "api/docs_controller.h"
+#include "api/static_controller.h"
 #include "api/version_controller.h"
 
 #include <httplib.h>
@@ -101,211 +102,19 @@ void Server::setupCORS()
 
 void Server::setupRoutes()
 {
-    // Root endpoint - Home page
-    m_server->Get("/", [](const httplib::Request & /*req*/, httplib::Response &res) {
-        std::string html = R"(<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tootega WebAPI</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
-            color: #e0e0e0;
-            min-height: 100vh;
-        }
-        .header {
-            background: linear-gradient(135deg, #1a2a4a 0%, #1e3a5f 100%);
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #333;
-        }
-        .header h1 { font-size: 1.5rem; color: #fff; }
-        .header h1 span { color: #4da6ff; }
-        .nav-links { display: flex; gap: 1rem; }
-        .nav-links a {
-            color: #aaa;
-            text-decoration: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            transition: all 0.2s;
-        }
-        .nav-links a:hover { background: rgba(255,255,255,0.1); color: #fff; }
-        .nav-links a.active { background: rgba(45,125,210,0.3); color: #6bb8ff; }
-        .hero {
-            text-align: center;
-            padding: 4rem 2rem;
-            background: linear-gradient(180deg, rgba(45,125,210,0.1) 0%, transparent 100%);
-        }
-        .hero h2 {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            color: #fff;
-        }
-        .hero h2 span { color: #4da6ff; }
-        .hero p {
-            font-size: 1.2rem;
-            color: #888;
-            max-width: 600px;
-            margin: 0 auto 2rem;
-        }
-        .hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
-        .btn {
-            padding: 0.8rem 2rem;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            text-decoration: none;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .btn-primary { background: #2d7dd2; color: white; }
-        .btn-primary:hover { background: #1e5aa8; transform: translateY(-2px); }
-        .btn-secondary { background: #333; color: #e0e0e0; border: 1px solid #444; }
-        .btn-secondary:hover { background: #444; transform: translateY(-2px); }
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
-            padding: 3rem 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .feature-card {
-            background: rgba(26, 26, 46, 0.8);
-            border: 1px solid #333;
-            border-radius: 12px;
-            padding: 2rem;
-            transition: all 0.3s;
-        }
-        .feature-card:hover {
-            border-color: #2d7dd2;
-            transform: translateY(-4px);
-            box-shadow: 0 8px 32px rgba(45,125,210,0.2);
-        }
-        .feature-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-        .feature-card h3 {
-            color: #fff;
-            margin-bottom: 0.5rem;
-            font-size: 1.25rem;
-        }
-        .feature-card p { color: #888; line-height: 1.6; }
-        .feature-card a {
-            display: inline-block;
-            margin-top: 1rem;
-            color: #4da6ff;
-            text-decoration: none;
-        }
-        .feature-card a:hover { text-decoration: underline; }
-        .footer {
-            text-align: center;
-            padding: 2rem;
-            border-top: 1px solid #333;
-            color: #666;
-        }
-        .footer a { color: #4da6ff; text-decoration: none; }
-        .footer a:hover { text-decoration: underline; }
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            margin-left: 1rem;
-        }
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background: #22c55e;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-    </style>
-</head>
-<body>
-    <header class="header">
-        <h1>Tootega <span>WebAPI</span> <span class="status-badge"><span class="status-dot"></span>Online</span></h1>
-        <nav class="nav-links">
-            <a href="/" class="active">Home</a>
-            <a href="/api/docs">API Docs</a>
-            <a href="/browseroso">Database Browser</a>
-            <a href="/login">Login</a>
-        </nav>
-    </header>
-
-    <section class="hero">
-        <h2>Bem-vindo ao <span>Tootega WebAPI</span></h2>
-        <p>Sistema de gerenciamento e API para acesso a dados. Navegue pelo banco de dados, consulte a documentacao ou faca login para acessar recursos protegidos.</p>
-        <div class="hero-buttons">
-            <a href="/browseroso" class="btn btn-primary">&#128202; Acessar Browser</a>
-            <a href="/api/docs" class="btn btn-secondary">&#128214; Documentacao</a>
-        </div>
-    </section>
-
-    <section class="features">
-        <div class="feature-card">
-            <div class="feature-icon">&#128202;</div>
-            <h3>Database Browser</h3>
-            <p>Navegue pelas tabelas do banco de dados, visualize dados, filtre e exporte informacoes de forma intuitiva.</p>
-            <a href="/browseroso">Acessar Browser &rarr;</a>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">&#128214;</div>
-            <h3>API Documentation</h3>
-            <p>Documentacao completa da API REST com exemplos de uso e descricao de todos os endpoints disponiveis.</p>
-            <a href="/api/docs">Ver Documentacao &rarr;</a>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">&#128274;</div>
-            <h3>Autenticacao JWT</h3>
-            <p>Sistema seguro de autenticacao com tokens JWT para proteger recursos e controlar acesso a API.</p>
-            <a href="/login">Fazer Login &rarr;</a>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">&#9881;</div>
-            <h3>API Version</h3>
-            <p>Informacoes sobre a versao atual da API, plataforma e ambiente de execucao.</p>
-            <a href="/api/version">Ver Versao &rarr;</a>
-        </div>
-    </section>
-
-    <footer class="footer">
-        <p>&copy; 2026 Tootega. Todos os direitos reservados.</p>
-        <p style="margin-top: 0.5rem;">
-            <a href="/health">Health Check</a> | 
-            <a href="/api/version">Version Info</a>
-        </p>
-    </footer>
-</body>
-</html>)";
-        res.set_content(html, "text/html; charset=utf-8");
-    });
-
     // Health check endpoint
     m_server->Get("/health", [](const httplib::Request & /*req*/, httplib::Response &res) {
         res.set_content(R"({"status": "healthy"})", "application/json");
     });
 
-    // Register API controllers
+    // Register controllers - ORDER MATTERS!
+    // Static controller first for HTML pages and static files
+    Api::StaticController::registerRoutes(*m_server);
+
+    // Auth controller for authentication endpoints
     Api::AuthController::registerRoutes(*m_server);
+
+    // API controllers
     Api::VersionController::registerRoutes(*m_server);
     Api::DocsController::registerRoutes(*m_server);
     Api::BrowserController::registerRoutes(*m_server);

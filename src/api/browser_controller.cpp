@@ -16,7 +16,8 @@ namespace Api
 
 void BrowserController::registerRoutes(httplib::Server &server)
 {
-    server.Get("/browseroso", getBrowserUI);
+    // Note: /browseroso page is served by StaticController
+    // Here we only register the API endpoints
     server.Post("/api/browseroso/connect", connectDatabase);
     server.Post("/api/browseroso/disconnect", disconnectDatabase);
     server.Get("/api/browseroso/status", getConnectionStatus);

@@ -26,6 +26,28 @@ if ($Clean -and (Test-Path $DistDir)) {
 New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
 Write-OK "Diretorio: $DistDir"
 
+# Compile TypeScript
+Write-Step "Compilando TypeScript..."
+$WebDir = Join-Path $ProjectRoot "web"
+if (Test-Path (Join-Path $WebDir "package.json")) {
+    Push-Location $WebDir
+    if (-not (Test-Path "node_modules")) {
+        Write-Host "Instalando dependencias npm..."
+        npm install --silent 2>$null
+    }
+    npm run build 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-OK "TypeScript compilado!"
+    }
+    else {
+        Write-Warn "Falha ao compilar TypeScript (verifique se npm esta instalado)"
+    }
+    Pop-Location
+}
+else {
+    Write-Warn "package.json nao encontrado em web/"
+}
+
 if (-not $SkipWindows) {
     Write-Step "Compilando Windows x64..."
     
@@ -43,7 +65,26 @@ if (-not $SkipWindows) {
         if ($LASTEXITCODE -eq 0) {
             $WinExe = Join-Path $ProjectRoot "bin\x64\Release\TootegaWebAPI.exe"
             if (Test-Path $WinExe) {
-                Copy-Item $WinExe (Join-Path $DistDir "TootegaWebAPI-windows-x64.exe")
+                # Create Windows distribution folder
+                $WinDistDir = Join-Path $DistDir "windows-x64"
+                New-Item -ItemType Directory -Force -Path $WinDistDir | Out-Null
+                
+                # Copy executable
+                Copy-Item $WinExe $WinDistDir
+                
+                # Copy web resources folder
+                $WebSrcDir = Join-Path $ProjectRoot "web"
+                if (Test-Path $WebSrcDir) {
+                    $WebDestDir = Join-Path $WinDistDir "web"
+                    Copy-Item -Path $WebSrcDir -Destination $WebDestDir -Recurse -Force
+                    # Remove unnecessary files from web folder
+                    Remove-Item -Path (Join-Path $WebDestDir "node_modules") -Recurse -Force -ErrorAction SilentlyContinue
+                    Remove-Item -Path (Join-Path $WebDestDir "ts") -Recurse -Force -ErrorAction SilentlyContinue
+                    Remove-Item -Path (Join-Path $WebDestDir "package*.json") -Force -ErrorAction SilentlyContinue
+                    Remove-Item -Path (Join-Path $WebDestDir "tsconfig.json") -Force -ErrorAction SilentlyContinue
+                    Write-OK "Web resources copiados!"
+                }
+                
                 Write-OK "Windows x64 build completo!"
             }
         }
@@ -77,13 +118,23 @@ if (-not $SkipLinux) {
     $null = docker run --rm --privileged multiarch/qemu-user-static --reset -p yes 2>&1
     
     Write-Step "Compilando Linux x64 (amd64)..."
-    docker buildx build --platform linux/amd64 --file "$ProjectRoot\docker\Dockerfile.linux" --target export --output "type=local,dest=$DistDir\linux-x64" $ProjectRoot 2>&1 | ForEach-Object { Write-Host $_ }
+    $LinuxX64Dir = Join-Path $DistDir "linux-x64"
+    docker buildx build --platform linux/amd64 --file "$ProjectRoot\docker\Dockerfile.linux" --target export --output "type=local,dest=$LinuxX64Dir" $ProjectRoot 2>&1 | ForEach-Object { Write-Host $_ }
     
     if ($LASTEXITCODE -eq 0) {
-        $LinuxX64 = Join-Path $DistDir "linux-x64\TootegaWebAPI"
+        $LinuxX64 = Join-Path $LinuxX64Dir "TootegaWebAPI"
         if (Test-Path $LinuxX64) {
-            Move-Item $LinuxX64 (Join-Path $DistDir "TootegaWebAPI-linux-x64") -Force
-            Remove-Item (Join-Path $DistDir "linux-x64") -Recurse -Force -ErrorAction SilentlyContinue
+            # Copy web resources for Linux x64
+            $WebSrcDir = Join-Path $ProjectRoot "web"
+            if (Test-Path $WebSrcDir) {
+                $WebDestDir = Join-Path $LinuxX64Dir "web"
+                Copy-Item -Path $WebSrcDir -Destination $WebDestDir -Recurse -Force
+                # Remove unnecessary files
+                Remove-Item -Path (Join-Path $WebDestDir "node_modules") -Recurse -Force -ErrorAction SilentlyContinue
+                Remove-Item -Path (Join-Path $WebDestDir "ts") -Recurse -Force -ErrorAction SilentlyContinue
+                Remove-Item -Path (Join-Path $WebDestDir "package*.json") -Force -ErrorAction SilentlyContinue
+                Remove-Item -Path (Join-Path $WebDestDir "tsconfig.json") -Force -ErrorAction SilentlyContinue
+            }
             Write-OK "Linux x64 build completo!"
         }
     }
@@ -94,13 +145,23 @@ if (-not $SkipLinux) {
     Write-Step "Compilando Linux ARM64 (aarch64)..."
     Write-Warn "Este build usa emulacao QEMU e pode demorar alguns minutos..."
     
-    docker buildx build --platform linux/arm64 --file "$ProjectRoot\docker\Dockerfile.linux" --target export --output "type=local,dest=$DistDir\linux-arm64" $ProjectRoot 2>&1 | ForEach-Object { Write-Host $_ }
+    $LinuxARM64Dir = Join-Path $DistDir "linux-arm64"
+    docker buildx build --platform linux/arm64 --file "$ProjectRoot\docker\Dockerfile.linux" --target export --output "type=local,dest=$LinuxARM64Dir" $ProjectRoot 2>&1 | ForEach-Object { Write-Host $_ }
     
     if ($LASTEXITCODE -eq 0) {
-        $LinuxARM64 = Join-Path $DistDir "linux-arm64\TootegaWebAPI"
+        $LinuxARM64 = Join-Path $LinuxARM64Dir "TootegaWebAPI"
         if (Test-Path $LinuxARM64) {
-            Move-Item $LinuxARM64 (Join-Path $DistDir "TootegaWebAPI-linux-arm64") -Force
-            Remove-Item (Join-Path $DistDir "linux-arm64") -Recurse -Force -ErrorAction SilentlyContinue
+            # Copy web resources for Linux ARM64
+            $WebSrcDir = Join-Path $ProjectRoot "web"
+            if (Test-Path $WebSrcDir) {
+                $WebDestDir = Join-Path $LinuxARM64Dir "web"
+                Copy-Item -Path $WebSrcDir -Destination $WebDestDir -Recurse -Force
+                # Remove unnecessary files
+                Remove-Item -Path (Join-Path $WebDestDir "node_modules") -Recurse -Force -ErrorAction SilentlyContinue
+                Remove-Item -Path (Join-Path $WebDestDir "ts") -Recurse -Force -ErrorAction SilentlyContinue
+                Remove-Item -Path (Join-Path $WebDestDir "package*.json") -Force -ErrorAction SilentlyContinue
+                Remove-Item -Path (Join-Path $WebDestDir "tsconfig.json") -Force -ErrorAction SilentlyContinue
+            }
             Write-OK "Linux ARM64 build completo!"
         }
     }
@@ -115,23 +176,26 @@ Write-Host "================================================================`n" 
 
 Write-Host "Arquivos gerados em: $DistDir`n" -ForegroundColor White
 
-$files = Get-ChildItem $DistDir -File 2>$null
-if ($files) {
-    Write-Host "Plataforma".PadRight(25) "Tamanho".PadRight(15) "Arquivo" -ForegroundColor Gray
+# List distribution folders
+$folders = Get-ChildItem $DistDir -Directory 2>$null
+if ($folders) {
+    Write-Host "Plataforma".PadRight(20) "Pasta".PadRight(25) "Conteudo" -ForegroundColor Gray
     Write-Host ("-" * 70) -ForegroundColor Gray
     
-    foreach ($file in $files) {
-        $platform = switch -Wildcard ($file.Name) {
+    foreach ($folder in $folders) {
+        $platform = switch -Wildcard ($folder.Name) {
             "*windows*" { "Windows x64" }
             "*linux-x64*" { "Linux x64" }
             "*linux-arm64*" { "Linux ARM64" }
             default { "Unknown" }
         }
-        $size = "{0:N2} MB" -f ($file.Length / 1MB)
-        Write-Host $platform.PadRight(25) $size.PadRight(15) $file.Name
+        $contents = (Get-ChildItem $folder.FullName -Recurse | Measure-Object).Count
+        Write-Host $platform.PadRight(20) $folder.Name.PadRight(25) "$contents arquivos"
     }
+    Write-Host ""
+    Write-Host "Cada pasta contem o executavel + pasta 'web' com os recursos estaticos." -ForegroundColor Yellow
     Write-Host ""
 }
 else {
-    Write-Warn "Nenhum arquivo encontrado no diretorio de distribuicao."
+    Write-Warn "Nenhuma pasta encontrada no diretorio de distribuicao."
 }
