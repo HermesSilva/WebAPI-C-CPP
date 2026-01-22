@@ -71,7 +71,7 @@ void StaticController::registerRoutes(httplib::Server &server)
     // HTML Pages
     server.Get("/", serveHomePage);
     server.Get("/login", serveLoginPage);
-    server.Get("/browseroso", serveBrowserPage);
+    server.Get("/browseroso", serveBrowserosoPage);
 
     // Static files (CSS, JS, images)
     server.Get(R"(/static/(.*))", serveStaticFile);
@@ -101,9 +101,9 @@ void StaticController::serveLoginPage(const httplib::Request & /*req*/, httplib:
     res.set_content(content, "text/html; charset=utf-8");
 }
 
-void StaticController::serveBrowserPage(const httplib::Request & /*req*/, httplib::Response &res)
+void StaticController::serveBrowserosoPage(const httplib::Request & /*req*/, httplib::Response &res)
 {
-    std::string content = readFile(getBasePath() + "/pages/browser.html");
+    std::string content = readFile(getBasePath() + "/pages/browseroso.html");
     if (content.empty())
     {
         res.status = 404;

@@ -5,7 +5,7 @@
 
 #include "server.h"
 #include "api/auth_controller.h"
-#include "api/browser_controller.h"
+#include "api/browseroso_controller.h"
 #include "api/docs_controller.h"
 #include "api/static_controller.h"
 #include "api/version_controller.h"
@@ -117,7 +117,7 @@ void Server::setupRoutes()
     // API controllers
     Api::VersionController::registerRoutes(*m_server);
     Api::DocsController::registerRoutes(*m_server);
-    Api::BrowserController::registerRoutes(*m_server);
+    Api::BrowserosoController::registerRoutes(*m_server);
 
     // 404 handler
     m_server->set_error_handler([](const httplib::Request &req, httplib::Response &res) {

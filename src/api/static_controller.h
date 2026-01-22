@@ -40,7 +40,7 @@ class StaticController
     static void serveStaticFile(const httplib::Request &req, httplib::Response &res);
     static void serveHomePage(const httplib::Request &req, httplib::Response &res);
     static void serveLoginPage(const httplib::Request &req, httplib::Response &res);
-    static void serveBrowserPage(const httplib::Request &req, httplib::Response &res);
+    static void serveBrowserosoPage(const httplib::Request &req, httplib::Response &res);
 
     static std::string readFile(const std::string &path);
     static std::string getMimeType(const std::string &path);

@@ -209,7 +209,7 @@
     <ClCompile Include="src\core\jwt.cpp" />
     <ClCompile Include="src\api\version_controller.cpp" />
     <ClCompile Include="src\api\docs_controller.cpp" />
-    <ClCompile Include="src\api\browser_controller.cpp" />
+    <ClCompile Include="src\api\browseroso_controller.cpp" />
     <ClCompile Include="src\api\auth_controller.cpp" />
     <ClCompile Include="src\api\static_controller.cpp" />
     <ClCompile Include="src\data\database.cpp" />
@@ -223,7 +223,7 @@
     <ClInclude Include="src\core\jwt.h" />
     <ClInclude Include="src\api\version_controller.h" />
     <ClInclude Include="src\api\docs_controller.h" />
-    <ClInclude Include="src\api\browser_controller.h" />
+    <ClInclude Include="src\api\browseroso_controller.h" />
     <ClInclude Include="src\api\auth_controller.h" />
     <ClInclude Include="src\api\static_controller.h" />
     <ClInclude Include="src\data\database.h" />

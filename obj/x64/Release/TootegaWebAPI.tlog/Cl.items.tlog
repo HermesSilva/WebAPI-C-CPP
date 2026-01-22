@@ -4,7 +4,7 @@ D:\Tootega\Source\WebAPI-C++\src\core\system_info.cpp;D:\Tootega\Source\WebAPI-C
 D:\Tootega\Source\WebAPI-C++\src\core\jwt.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Release\jwt.obj
 D:\Tootega\Source\WebAPI-C++\src\api\version_controller.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Release\version_controller.obj
 D:\Tootega\Source\WebAPI-C++\src\api\docs_controller.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Release\docs_controller.obj
-D:\Tootega\Source\WebAPI-C++\src\api\browser_controller.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Release\browser_controller.obj
+D:\Tootega\Source\WebAPI-C++\src\api\browseroso_controller.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Release\browseroso_controller.obj
 D:\Tootega\Source\WebAPI-C++\src\api\auth_controller.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Release\auth_controller.obj
 D:\Tootega\Source\WebAPI-C++\src\api\static_controller.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Release\static_controller.obj
 D:\Tootega\Source\WebAPI-C++\src\data\database.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Release\database.obj
