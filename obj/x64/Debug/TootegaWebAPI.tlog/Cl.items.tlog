@@ -1,0 +1,9 @@
+D:\Tootega\Source\WebAPI-C++\src\main.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Debug\main.obj
+D:\Tootega\Source\WebAPI-C++\src\core\server.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Debug\server.obj
+D:\Tootega\Source\WebAPI-C++\src\core\system_info.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Debug\system_info.obj
+D:\Tootega\Source\WebAPI-C++\src\core\jwt.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Debug\jwt.obj
+D:\Tootega\Source\WebAPI-C++\src\api\version_controller.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Debug\version_controller.obj
+D:\Tootega\Source\WebAPI-C++\src\api\docs_controller.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Debug\docs_controller.obj
+D:\Tootega\Source\WebAPI-C++\src\api\browser_controller.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Debug\browser_controller.obj
+D:\Tootega\Source\WebAPI-C++\src\api\auth_controller.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Debug\auth_controller.obj
+D:\Tootega\Source\WebAPI-C++\src\data\database.cpp;D:\Tootega\Source\WebAPI-C++\obj\x64\Debug\database.obj

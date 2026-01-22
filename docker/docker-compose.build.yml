@@ -1,0 +1,39 @@
+# Docker Compose para build multi-plataforma
+# Uso: docker-compose -f docker/docker-compose.build.yml up
+
+version: '3.8'
+
+services:
+  # Build Linux x64
+  build-linux-x64:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.linux
+      target: builder
+      platforms:
+        - linux/amd64
+    image: tootega-build:linux-x64
+    container_name: tootega-build-linux-x64
+    volumes:
+      - ../dist:/dist
+    command: >
+      sh -c "cp /src/build/TootegaWebAPI /dist/TootegaWebAPI-linux-x64 && 
+             chmod +x /dist/TootegaWebAPI-linux-x64 &&
+             echo 'Linux x64 build completed!'"
+
+  # Build Linux ARM64
+  build-linux-arm64:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.linux
+      target: builder
+      platforms:
+        - linux/arm64
+    image: tootega-build:linux-arm64
+    container_name: tootega-build-linux-arm64
+    volumes:
+      - ../dist:/dist
+    command: >
+      sh -c "cp /src/build/TootegaWebAPI /dist/TootegaWebAPI-linux-arm64 && 
+             chmod +x /dist/TootegaWebAPI-linux-arm64 &&
+             echo 'Linux ARM64 build completed!'"
