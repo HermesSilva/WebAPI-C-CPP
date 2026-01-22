@@ -1,0 +1,54 @@
+/**
+ * Estilos específicos da página Home
+ */
+
+.hero {
+    text-align: center;
+    padding: var(--spacing-3xl) var(--spacing-xl);
+    background: var(--gradient-hero);
+}
+
+.hero__title {
+    font-size: var(--font-size-3xl);
+    color: var(--color-text-white);
+    margin-bottom: var(--spacing-md);
+}
+
+.hero__title span {
+    color: var(--color-primary-light);
+}
+
+.hero__description {
+    font-size: var(--font-size-lg);
+    color: var(--color-text-secondary);
+    max-width: var(--max-width-md);
+    margin: 0 auto var(--spacing-xl);
+    line-height: 1.6;
+}
+
+.hero__buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Features Grid */
+.features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--spacing-xl);
+    padding: var(--spacing-2xl) var(--spacing-xl);
+    max-width: var(--max-width-xl);
+    margin: 0 auto;
+}
+
+@media (max-width: 640px) {
+    .hero__title {
+        font-size: var(--font-size-2xl);
+    }
+
+    .hero__description {
+        font-size: var(--font-size-md);
+    }
+}

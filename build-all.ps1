@@ -100,12 +100,24 @@ if (-not $SkipWindows) {
 if (-not $SkipLinux) {
     Write-Step "Verificando Docker..."
     
-    $dockerVersion = docker --version 2>$null
-    if (-not $dockerVersion) {
-        Write-Err "Docker nao encontrado! Instale o Docker Desktop."
-        exit 1
+    try {
+        $dockerVersion = docker --version 2>$null
     }
-    Write-OK "Docker encontrado: $dockerVersion"
+    catch {
+        $dockerVersion = $null
+    }
+    
+    if (-not $dockerVersion) {
+        Write-Warn "Docker nao encontrado! Pulando builds Linux."
+        Write-Warn "Para compilar para Linux, instale o Docker Desktop: https://www.docker.com/products/docker-desktop"
+        $SkipLinux = $true
+    }
+    else {
+        Write-OK "Docker encontrado: $dockerVersion"
+    }
+}
+
+if (-not $SkipLinux) {
     
     Write-Step "Configurando Docker Buildx para multi-arquitetura..."
     $builderExists = docker buildx ls 2>&1 | Select-String "tootega-builder"
