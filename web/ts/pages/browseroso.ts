@@ -31,8 +31,20 @@ interface DataResult {
     // Require authentication
     Auth.requireAuth();
 
+    // Generate unique tab ID for this browser tab (session isolation)
+    const tabId = 'tab_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
+
+    // Helper function to make authenticated fetch with tab ID
+    async function tabFetch(url: string, options: RequestInit = {}): Promise<Response> {
+        // Add tabId to URL as query parameter
+        const separator = url.includes('?') ? '&' : '?';
+        const urlWithTab = url + separator + 'tabId=' + encodeURIComponent(tabId);
+        return Auth.authFetch(urlWithTab, options);
+    }
+
     // State
     let isConnected = false;
+    let selectedDatabase: string | null = null;
     let selectedTable: string | null = null;
     let selectedSchema: string | null = null;
     let columns: ColumnInfo[] = [];
@@ -44,6 +56,8 @@ interface DataResult {
     const connectBtn = document.getElementById('connectBtn') as HTMLButtonElement;
     const statusDot = document.getElementById('statusDot') as HTMLElement;
     const statusText = document.getElementById('statusText') as HTMLElement;
+    const databaseSection = document.getElementById('databaseSection') as HTMLElement;
+    const databaseSelect = document.getElementById('databaseSelect') as HTMLSelectElement;
     const tableList = document.getElementById('tableList') as HTMLElement;
     const filterPanel = document.getElementById('filterPanel') as HTMLElement;
     const filterColumn = document.getElementById('filterColumn') as HTMLSelectElement;
@@ -67,9 +81,17 @@ interface DataResult {
         isConnected = connected;
 
         statusDot.className = 'connection-status__dot' + (connected ? ' connection-status__dot--connected' : '');
-        statusText.textContent = connected ? 'Conectado ao TFX' : 'Desconectado';
+        statusText.textContent = connected ? 'Conectado ao servidor' : 'Desconectado';
         connectBtn.textContent = connected ? 'Desconectar' : 'Conectar';
         connectBtn.className = 'btn btn--block ' + (connected ? 'btn--danger' : 'btn--primary');
+
+        // Show/hide database section
+        if (connected) {
+            databaseSection.classList.remove('hidden');
+        } else {
+            databaseSection.classList.add('hidden');
+            databaseSelect.innerHTML = '<option value="">Selecione uma base...</option>';
+        }
     }
 
     /**
@@ -91,7 +113,7 @@ interface DataResult {
         connectBtn.textContent = 'Conectando...';
 
         try {
-            const response = await Auth.authFetch('/api/browseroso/connect', {
+            const response = await tabFetch('/api/browseroso/connect', {
                 method: 'POST'
             });
 
@@ -99,7 +121,7 @@ interface DataResult {
 
             if (data.success) {
                 setConnectionStatus(true);
-                await loadTables();
+                await loadDatabases();
             } else {
                 alert('Falha na conexão: ' + (data.message || 'Erro desconhecido'));
             }
@@ -116,7 +138,7 @@ interface DataResult {
      */
     async function disconnect(): Promise<void> {
         try {
-            await Auth.authFetch('/api/browseroso/disconnect', {
+            await tabFetch('/api/browseroso/disconnect', {
                 method: 'POST'
             });
         } catch {
@@ -124,12 +146,13 @@ interface DataResult {
         }
 
         setConnectionStatus(false);
+        selectedDatabase = null;
         selectedTable = null;
         selectedSchema = null;
 
         tableList.innerHTML = `
             <div class="empty-state">
-                <p>Conecte para ver as tabelas</p>
+                <p>Selecione uma base de dados</p>
             </div>
         `;
 
@@ -146,11 +169,94 @@ interface DataResult {
     }
 
     /**
+     * Load databases list
+     */
+    async function loadDatabases(): Promise<void> {
+        try {
+            const response = await tabFetch('/api/browseroso/databases');
+            const data = await response.json();
+
+            if (data.databases && data.databases.length > 0) {
+                const databases: string[] = data.databases;
+                databaseSelect.innerHTML = '<option value="">Selecione uma base...</option>' +
+                    databases.map(db => `<option value="${escapeHtml(db)}">${escapeHtml(db)}</option>`).join('');
+            } else {
+                databaseSelect.innerHTML = '<option value="">Nenhuma base encontrada</option>';
+            }
+        } catch (error) {
+            databaseSelect.innerHTML = '<option value="">Erro ao carregar bases</option>';
+        }
+    }
+
+    /**
+     * Change current database
+     */
+    async function changeDatabase(databaseName: string): Promise<void> {
+        if (!databaseName) {
+            selectedDatabase = null;
+            tableList.innerHTML = `
+                <div class="empty-state">
+                    <p>Selecione uma base de dados</p>
+                </div>
+            `;
+            filterPanel.classList.add('hidden');
+            pagination.classList.add('hidden');
+            dataPanel.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state__icon">📋</div>
+                    <h3 class="empty-state__title">Nenhuma Tabela Selecionada</h3>
+                    <p>Selecione uma tabela na barra lateral para visualizar os dados</p>
+                </div>
+            `;
+            return;
+        }
+
+        tableList.innerHTML = `
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Carregando...</p>
+            </div>
+        `;
+
+        try {
+            const response = await tabFetch('/api/browseroso/database', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ database: databaseName })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                selectedDatabase = databaseName;
+                statusText.textContent = `Conectado: ${databaseName}`;
+                await loadTables();
+            } else {
+                alert('Falha ao mudar de base: ' + (data.message || 'Erro desconhecido'));
+                tableList.innerHTML = `
+                    <div class="empty-state">
+                        <p>Selecione uma base de dados</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            alert('Erro: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+            tableList.innerHTML = `
+                <div class="empty-state">
+                    <p>Selecione uma base de dados</p>
+                </div>
+            `;
+        }
+    }
+
+    /**
      * Load tables list
      */
     async function loadTables(): Promise<void> {
         try {
-            const response = await Auth.authFetch('/api/browseroso/tables');
+            const response = await tabFetch('/api/browseroso/tables');
             const data = await response.json();
 
             if (data.tables && data.tables.length > 0) {
@@ -206,7 +312,7 @@ interface DataResult {
 
         // Load columns
         try {
-            const response = await Auth.authFetch(`/api/browseroso/columns?schema=${encodeURIComponent(schema)}&table=${encodeURIComponent(table)}`);
+            const response = await tabFetch(`/api/browseroso/columns?schema=${encodeURIComponent(schema)}&table=${encodeURIComponent(table)}`);
             const data = await response.json();
 
             columns = data.columns || [];
@@ -249,7 +355,7 @@ interface DataResult {
         }
 
         try {
-            const response = await Auth.authFetch(url);
+            const response = await tabFetch(url);
             const data: DataResult = await response.json();
 
             if (!data.success) {
@@ -355,12 +461,12 @@ interface DataResult {
      */
     async function checkStatus(): Promise<void> {
         try {
-            const response = await Auth.authFetch('/api/browseroso/status');
+            const response = await tabFetch('/api/browseroso/status');
             const data = await response.json();
 
             if (data.connected) {
                 setConnectionStatus(true);
-                await loadTables();
+                await loadDatabases();
             }
         } catch {
             // Not connected
@@ -373,6 +479,7 @@ interface DataResult {
     function init(): void {
         // Event listeners
         connectBtn.addEventListener('click', toggleConnection);
+        databaseSelect.addEventListener('change', () => changeDatabase(databaseSelect.value));
         btnFilter.addEventListener('click', applyFilter);
         btnClearFilter.addEventListener('click', clearFilter);
         btnLogout.addEventListener('click', (e) => {

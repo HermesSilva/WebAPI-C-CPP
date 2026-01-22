@@ -32,6 +32,8 @@ class BrowserosoController
     static void connectDatabase(const httplib::Request &req, httplib::Response &res);
     static void disconnectDatabase(const httplib::Request &req, httplib::Response &res);
     static void getConnectionStatus(const httplib::Request &req, httplib::Response &res);
+    static void getDatabases(const httplib::Request &req, httplib::Response &res);
+    static void changeDatabase(const httplib::Request &req, httplib::Response &res);
     static void getTables(const httplib::Request &req, httplib::Response &res);
     static void getTableColumns(const httplib::Request &req, httplib::Response &res);
     static void getTableData(const httplib::Request &req, httplib::Response &res);

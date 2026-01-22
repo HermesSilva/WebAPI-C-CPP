@@ -1,7 +1,14 @@
 (function () {
     'use strict';
     Auth.requireAuth();
+    const tabId = 'tab_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
+    async function tabFetch(url, options = {}) {
+        const separator = url.includes('?') ? '&' : '?';
+        const urlWithTab = url + separator + 'tabId=' + encodeURIComponent(tabId);
+        return Auth.authFetch(urlWithTab, options);
+    }
     let isConnected = false;
+    let selectedDatabase = null;
     let selectedTable = null;
     let selectedSchema = null;
     let columns = [];
@@ -11,6 +18,8 @@
     const connectBtn = document.getElementById('connectBtn');
     const statusDot = document.getElementById('statusDot');
     const statusText = document.getElementById('statusText');
+    const databaseSection = document.getElementById('databaseSection');
+    const databaseSelect = document.getElementById('databaseSelect');
     const tableList = document.getElementById('tableList');
     const filterPanel = document.getElementById('filterPanel');
     const filterColumn = document.getElementById('filterColumn');
@@ -29,9 +38,16 @@
     function setConnectionStatus(connected) {
         isConnected = connected;
         statusDot.className = 'connection-status__dot' + (connected ? ' connection-status__dot--connected' : '');
-        statusText.textContent = connected ? 'Conectado ao TFX' : 'Desconectado';
+        statusText.textContent = connected ? 'Conectado ao servidor' : 'Desconectado';
         connectBtn.textContent = connected ? 'Desconectar' : 'Conectar';
         connectBtn.className = 'btn btn--block ' + (connected ? 'btn--danger' : 'btn--primary');
+        if (connected) {
+            databaseSection.classList.remove('hidden');
+        }
+        else {
+            databaseSection.classList.add('hidden');
+            databaseSelect.innerHTML = '<option value="">Selecione uma base...</option>';
+        }
     }
     async function toggleConnection() {
         if (isConnected) {
@@ -45,13 +61,13 @@
         connectBtn.disabled = true;
         connectBtn.textContent = 'Conectando...';
         try {
-            const response = await Auth.authFetch('/api/browseroso/connect', {
+            const response = await tabFetch('/api/browseroso/connect', {
                 method: 'POST'
             });
             const data = await response.json();
             if (data.success) {
                 setConnectionStatus(true);
-                await loadTables();
+                await loadDatabases();
             }
             else {
                 alert('Falha na conexão: ' + (data.message || 'Erro desconhecido'));
@@ -67,18 +83,19 @@
     }
     async function disconnect() {
         try {
-            await Auth.authFetch('/api/browseroso/disconnect', {
+            await tabFetch('/api/browseroso/disconnect', {
                 method: 'POST'
             });
         }
         catch {
         }
         setConnectionStatus(false);
+        selectedDatabase = null;
         selectedTable = null;
         selectedSchema = null;
         tableList.innerHTML = `
             <div class="empty-state">
-                <p>Conecte para ver as tabelas</p>
+                <p>Selecione uma base de dados</p>
             </div>
         `;
         filterPanel.classList.add('hidden');
@@ -91,9 +108,83 @@
             </div>
         `;
     }
+    async function loadDatabases() {
+        try {
+            const response = await tabFetch('/api/browseroso/databases');
+            const data = await response.json();
+            if (data.databases && data.databases.length > 0) {
+                const databases = data.databases;
+                databaseSelect.innerHTML = '<option value="">Selecione uma base...</option>' +
+                    databases.map(db => `<option value="${escapeHtml(db)}">${escapeHtml(db)}</option>`).join('');
+            }
+            else {
+                databaseSelect.innerHTML = '<option value="">Nenhuma base encontrada</option>';
+            }
+        }
+        catch (error) {
+            databaseSelect.innerHTML = '<option value="">Erro ao carregar bases</option>';
+        }
+    }
+    async function changeDatabase(databaseName) {
+        if (!databaseName) {
+            selectedDatabase = null;
+            tableList.innerHTML = `
+                <div class="empty-state">
+                    <p>Selecione uma base de dados</p>
+                </div>
+            `;
+            filterPanel.classList.add('hidden');
+            pagination.classList.add('hidden');
+            dataPanel.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state__icon">📋</div>
+                    <h3 class="empty-state__title">Nenhuma Tabela Selecionada</h3>
+                    <p>Selecione uma tabela na barra lateral para visualizar os dados</p>
+                </div>
+            `;
+            return;
+        }
+        tableList.innerHTML = `
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Carregando...</p>
+            </div>
+        `;
+        try {
+            const response = await tabFetch('/api/browseroso/database', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ database: databaseName })
+            });
+            const data = await response.json();
+            if (data.success) {
+                selectedDatabase = databaseName;
+                statusText.textContent = `Conectado: ${databaseName}`;
+                await loadTables();
+            }
+            else {
+                alert('Falha ao mudar de base: ' + (data.message || 'Erro desconhecido'));
+                tableList.innerHTML = `
+                    <div class="empty-state">
+                        <p>Selecione uma base de dados</p>
+                    </div>
+                `;
+            }
+        }
+        catch (error) {
+            alert('Erro: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+            tableList.innerHTML = `
+                <div class="empty-state">
+                    <p>Selecione uma base de dados</p>
+                </div>
+            `;
+        }
+    }
     async function loadTables() {
         try {
-            const response = await Auth.authFetch('/api/browseroso/tables');
+            const response = await tabFetch('/api/browseroso/tables');
             const data = await response.json();
             if (data.tables && data.tables.length > 0) {
                 const tables = data.tables;
@@ -138,7 +229,7 @@
         currentPage = 1;
         filterPanel.classList.remove('hidden');
         try {
-            const response = await Auth.authFetch(`/api/browseroso/columns?schema=${encodeURIComponent(schema)}&table=${encodeURIComponent(table)}`);
+            const response = await tabFetch(`/api/browseroso/columns?schema=${encodeURIComponent(schema)}&table=${encodeURIComponent(table)}`);
             const data = await response.json();
             columns = data.columns || [];
             filterColumn.innerHTML = '<option value="">Todas as colunas</option>' +
@@ -169,7 +260,7 @@
             url += `&filterColumn=${encodeURIComponent(fc)}&filterValue=${encodeURIComponent(fv)}`;
         }
         try {
-            const response = await Auth.authFetch(url);
+            const response = await tabFetch(url);
             const data = await response.json();
             if (!data.success) {
                 dataPanel.innerHTML = `<div class="message message--error">${escapeHtml(data.error)}</div>`;
@@ -248,11 +339,11 @@
     }
     async function checkStatus() {
         try {
-            const response = await Auth.authFetch('/api/browseroso/status');
+            const response = await tabFetch('/api/browseroso/status');
             const data = await response.json();
             if (data.connected) {
                 setConnectionStatus(true);
-                await loadTables();
+                await loadDatabases();
             }
         }
         catch {
@@ -260,6 +351,7 @@
     }
     function init() {
         connectBtn.addEventListener('click', toggleConnection);
+        databaseSelect.addEventListener('change', () => changeDatabase(databaseSelect.value));
         btnFilter.addEventListener('click', applyFilter);
         btnClearFilter.addEventListener('click', clearFilter);
         btnLogout.addEventListener('click', (e) => {

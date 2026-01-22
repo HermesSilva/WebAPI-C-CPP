@@ -195,6 +195,69 @@ class Database::Impl
         return m_connected;
     }
 
+    std::vector<std::string> getDatabases()
+    {
+        std::vector<std::string> databases;
+
+        if (!m_connected)
+            return databases;
+
+        OdbcHandle<SQLHSTMT> stmt;
+        SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, m_dbc.get(), stmt.ptr());
+        if (!SQL_SUCCEEDED(ret))
+            return databases;
+
+        // Query system databases
+        const char *sql = "SELECT name FROM sys.databases WHERE state_desc = 'ONLINE' ORDER BY name";
+        ret = SQLExecDirect(stmt.get(), (SQLCHAR *)sql, SQL_NTS);
+        if (!SQL_SUCCEEDED(ret))
+            return databases;
+
+        SQLCHAR dbName[256];
+        SQLLEN dbNameLen;
+
+        while (SQLFetch(stmt.get()) == SQL_SUCCESS)
+        {
+            SQLGetData(stmt.get(), 1, SQL_C_CHAR, dbName, sizeof(dbName), &dbNameLen);
+            databases.push_back(std::string((char *)dbName));
+        }
+
+        return databases;
+    }
+
+    bool useDatabase(const std::string &databaseName)
+    {
+        if (!m_connected)
+            return false;
+
+        // Validate database name
+        if (!isValidIdentifier(databaseName))
+            return false;
+
+        OdbcHandle<SQLHSTMT> stmt;
+        SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_STMT, m_dbc.get(), stmt.ptr());
+        if (!SQL_SUCCEEDED(ret))
+            return false;
+
+        std::string sql = "USE [" + databaseName + "]";
+        ret = SQLExecDirect(stmt.get(), (SQLCHAR *)sql.c_str(), SQL_NTS);
+
+        if (SQL_SUCCEEDED(ret))
+        {
+            // Update connection string info for display
+            auto pos = m_connectionString.find("Initial Catalog=");
+            if (pos != std::string::npos)
+            {
+                auto end = m_connectionString.find(';', pos);
+                m_connectionString = m_connectionString.substr(0, pos) + "Initial Catalog=" + databaseName +
+                                     m_connectionString.substr(end);
+            }
+            return true;
+        }
+
+        return false;
+    }
+
     std::vector<TableInfo> getTables()
     {
         std::vector<TableInfo> tables;
@@ -591,6 +654,18 @@ void Database::disconnect()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_impl->disconnect();
+}
+
+std::vector<std::string> Database::getDatabases()
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_impl->getDatabases();
+}
+
+bool Database::useDatabase(const std::string &databaseName)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_impl->useDatabase(databaseName);
 }
 
 std::vector<TableInfo> Database::getTables()

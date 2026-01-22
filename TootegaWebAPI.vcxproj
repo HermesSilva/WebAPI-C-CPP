@@ -213,6 +213,7 @@
     <ClCompile Include="src\api\auth_controller.cpp" />
     <ClCompile Include="src\api\static_controller.cpp" />
     <ClCompile Include="src\data\database.cpp" />
+    <ClCompile Include="src\data\connection_manager.cpp" />
   </ItemGroup>
   
   <!-- Header Files -->
@@ -227,6 +228,7 @@
     <ClInclude Include="src\api\auth_controller.h" />
     <ClInclude Include="src\api\static_controller.h" />
     <ClInclude Include="src\data\database.h" />
+    <ClInclude Include="src\data\connection_manager.h" />
   </ItemGroup>
   
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

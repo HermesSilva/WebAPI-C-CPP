@@ -5,7 +5,7 @@
 
 #include "browseroso_controller.h"
 #include "auth_controller.h"
-#include "data/database.h"
+#include "data/connection_manager.h"
 
 #include <sstream>
 
@@ -14,6 +14,34 @@ namespace Tootega
 namespace Api
 {
 
+// Helper to get session ID from request (using tabId parameter for per-tab isolation)
+static std::string getSessionId(const httplib::Request &req)
+{
+    // First try to get tabId from query parameter (per-tab isolation)
+    std::string tabId = req.get_param_value("tabId");
+    if (!tabId.empty())
+    {
+        // Combine with JWT token to ensure security (user can only access their own tabs)
+        std::string token = AuthController::extractToken(req);
+        if (!token.empty())
+        {
+            // Use first 20 chars of token + tabId for uniqueness
+            return token.substr(0, std::min(size_t(20), token.size())) + "_" + tabId;
+        }
+        return tabId;
+    }
+
+    // Fallback to JWT token only (legacy behavior)
+    return AuthController::extractToken(req);
+}
+
+// Helper to get database connection for current session
+static Data::DatabaseConnection &getDbConnection(const httplib::Request &req)
+{
+    std::string sessionId = getSessionId(req);
+    return Data::ConnectionManager::getInstance().getConnection(sessionId);
+}
+
 void BrowserosoController::registerRoutes(httplib::Server &server)
 {
     // Note: /browseroso page is served by StaticController
@@ -21,6 +49,8 @@ void BrowserosoController::registerRoutes(httplib::Server &server)
     server.Post("/api/browseroso/connect", connectDatabase);
     server.Post("/api/browseroso/disconnect", disconnectDatabase);
     server.Get("/api/browseroso/status", getConnectionStatus);
+    server.Get("/api/browseroso/databases", getDatabases);
+    server.Post("/api/browseroso/database", changeDatabase);
     server.Get("/api/browseroso/tables", getTables);
     server.Get("/api/browseroso/columns", getTableColumns);
     server.Get("/api/browseroso/data", getTableData);
@@ -47,9 +77,9 @@ void BrowserosoController::connectDatabase(const httplib::Request &req, httplib:
         return;
     }
 
-    auto &db = Data::Database::getInstance();
+    auto &db = getDbConnection(req);
 
-    std::string connStr = "Data Source=localhost;Initial Catalog=TFX;Integrated Security=True;"
+    std::string connStr = "Data Source=localhost;Initial Catalog=master;Integrated Security=True;"
                           "Persist Security Info=False;Pooling=False;MultipleActiveResultSets=False;"
                           "Encrypt=False;TrustServerCertificate=True";
 
@@ -83,7 +113,8 @@ void BrowserosoController::disconnectDatabase(const httplib::Request &req, httpl
     if (!AuthController::verifyAuth(req, res))
         return;
 
-    Data::Database::getInstance().disconnect();
+    std::string sessionId = getSessionId(req);
+    Data::ConnectionManager::getInstance().removeConnection(sessionId);
     res.set_content("{\"success\": true, \"message\": \"Disconnected\"}", "application/json");
 }
 
@@ -92,9 +123,93 @@ void BrowserosoController::getConnectionStatus(const httplib::Request &req, http
     if (!AuthController::verifyAuth(req, res))
         return;
 
-    auto &db = Data::Database::getInstance();
+    std::string sessionId = getSessionId(req);
+    auto &manager = Data::ConnectionManager::getInstance();
+
+    bool connected = manager.hasConnection(sessionId);
+    std::string info = "Not connected";
+
+    if (connected)
+    {
+        auto &db = manager.getConnection(sessionId);
+        info = db.getConnectionInfo();
+    }
+
     std::ostringstream json;
-    json << "{\"connected\": " << (db.isConnected() ? "true" : "false") << ",";
+    json << "{\"connected\": " << (connected ? "true" : "false") << ",";
+    json << "\"info\": \"" << info << "\"}";
+    res.set_content(json.str(), "application/json");
+}
+
+void BrowserosoController::getDatabases(const httplib::Request &req, httplib::Response &res)
+{
+    if (!AuthController::verifyAuth(req, res))
+        return;
+
+    auto &db = getDbConnection(req);
+
+    if (!db.isConnected())
+    {
+        res.set_content("{\"error\": \"Not connected\"}", "application/json");
+        res.status = 400;
+        return;
+    }
+
+    auto databases = db.getDatabases();
+    std::ostringstream json;
+    json << "{\"databases\": [";
+    for (size_t i = 0; i < databases.size(); i++)
+    {
+        if (i > 0)
+            json << ",";
+        json << "\"" << databases[i] << "\"";
+    }
+    json << "]}";
+    res.set_content(json.str(), "application/json");
+}
+
+void BrowserosoController::changeDatabase(const httplib::Request &req, httplib::Response &res)
+{
+    if (!AuthController::verifyAuth(req, res))
+        return;
+
+    auto &db = getDbConnection(req);
+
+    if (!db.isConnected())
+    {
+        res.set_content("{\"error\": \"Not connected\"}", "application/json");
+        res.status = 400;
+        return;
+    }
+
+    // Parse database name from request body
+    std::string databaseName;
+    if (!req.body.empty())
+    {
+        auto pos = req.body.find("\"database\"");
+        if (pos != std::string::npos)
+        {
+            auto start = req.body.find(':', pos) + 1;
+            auto quote1 = req.body.find('"', start);
+            auto quote2 = req.body.find('"', quote1 + 1);
+            if (quote1 != std::string::npos && quote2 != std::string::npos)
+            {
+                databaseName = req.body.substr(quote1 + 1, quote2 - quote1 - 1);
+            }
+        }
+    }
+
+    if (databaseName.empty())
+    {
+        res.set_content("{\"error\": \"Database name required\"}", "application/json");
+        res.status = 400;
+        return;
+    }
+
+    bool success = db.useDatabase(databaseName);
+    std::ostringstream json;
+    json << "{\"success\": " << (success ? "true" : "false") << ",";
+    json << "\"message\": \"" << (success ? "Changed to " + databaseName : "Failed to change database") << "\",";
     json << "\"info\": \"" << db.getConnectionInfo() << "\"}";
     res.set_content(json.str(), "application/json");
 }
@@ -104,7 +219,7 @@ void BrowserosoController::getTables(const httplib::Request &req, httplib::Respo
     if (!AuthController::verifyAuth(req, res))
         return;
 
-    auto &db = Data::Database::getInstance();
+    auto &db = getDbConnection(req);
 
     if (!db.isConnected())
     {
@@ -131,7 +246,7 @@ void BrowserosoController::getTableColumns(const httplib::Request &req, httplib:
     if (!AuthController::verifyAuth(req, res))
         return;
 
-    auto &db = Data::Database::getInstance();
+    auto &db = getDbConnection(req);
 
     if (!db.isConnected())
     {
@@ -171,7 +286,7 @@ void BrowserosoController::getTableData(const httplib::Request &req, httplib::Re
     if (!AuthController::verifyAuth(req, res))
         return;
 
-    auto &db = Data::Database::getInstance();
+    auto &db = getDbConnection(req);
 
     if (!db.isConnected())
     {

@@ -84,6 +84,18 @@ class Database
     void disconnect();
 
     /**
+     * @brief Get list of all databases on the server
+     */
+    std::vector<std::string> getDatabases();
+
+    /**
+     * @brief Change the current database
+     * @param databaseName Name of the database to switch to
+     * @return true if successful
+     */
+    bool useDatabase(const std::string &databaseName);
+
+    /**
      * @brief Get list of all tables in database
      */
     std::vector<TableInfo> getTables();

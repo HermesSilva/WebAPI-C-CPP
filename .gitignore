@@ -67,3 +67,5 @@ node_modules/
 
 # Logs
 *.log
+/obj
+/bin

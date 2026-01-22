@@ -67,6 +67,7 @@ set(SOURCES
     src/api/auth_controller.cpp
     src/api/static_controller.cpp
     src/data/database.cpp
+    src/data/connection_manager.cpp
 )
 
 set(HEADERS
